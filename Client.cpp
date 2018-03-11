@@ -23,7 +23,6 @@ Client::Client()
 
 void  Client::createClientSocket()
   {
-
     memset(&hints, 0, sizeof hints);
     hints.ai_family = AF_UNSPEC;
     hints.ai_socktype = SOCK_STREAM;
@@ -31,28 +30,59 @@ void  Client::createClientSocket()
 	/*if ((rv = getaddrinfo(argv[1],argv[2], &hints, &servinfo)) != 0)
     {
         cout<<"Error on getaddrinffo";
-        exit(1);
-    }*/
-    if ((rv = getaddrinfo("127.0.0.1","8888", &hints, &servinfo)) != 0)
+        //exit(1);
+    }
+    else */
+    try
     {
-        cout<<"Error on getaddrinffo";
+        if((rv = getaddrinfo("127.0.0.1","8888", &hints, &servinfo)) != 0)
+        {
+            throw(-1);
+            //cout<<"Error on getaddrinffo";
+            //exit(1);
+        }
+    }catch(int i)
+    {
+        cout<<"erro on getaddrifno"<<endl;
         exit(1);
     }
+
 
     // loop through all the results and connect to the first we can
     for(p = servinfo; p != NULL; p = p->ai_next) {
-        if ((sockfd = socket(p->ai_family, p->ai_socktype,
-                p->ai_protocol)) == -1) {
-            continue;
-        }
+        try
+        {
+            if ((sockfd = socket(p->ai_family, p->ai_socktype,
+                p->ai_protocol)) == -1)
+            {
+                throw(-1);
+                continue;
+            }
 
-        if (connect(sockfd, p->ai_addr, p->ai_addrlen) == -1) {
-           // close(sockfd);
-            exit(1);
         }
+        catch(int i)
+    {
+        cout<<"exception error caught on connecting to socket!"<<endl;
+        exit(1);
+    }
+
+        try
+        {
+            if (connect(sockfd, p->ai_addr, p->ai_addrlen) == -1)
+            {
+               // close(sockfd);
+                throw(-1);
+            }
+        }
+	catch(int i)
+    {
+        cout<<"exception error caught on connecting to socket!"<<endl;
+        exit(1);
+    }
 
         break;
     }
+    
 
     if (p == NULL) {
         cout<<"client failed to connect";
@@ -106,6 +136,10 @@ void Client::login()
     epassword->set_hexpand(true);
     epassword->set_visibility(false);
     grid->attach(*epassword,1,1,2,1);
+  	/*gtk_signal_connect (GTK_OBJECT(*eusername), "activate",
+                      GTK_SIGNAL_FUNC(on_login_click),
+                      NULL);*/
+    //signal_clicked().
     Gtk::Button *blogin=Gtk::manage(new Gtk::Button("Login"));
     blogin->signal_clicked().connect(sigc::bind<Gtk::Entry*,Gtk::Entry*>(sigc::mem_fun(*this,&Client::on_login_click),eusername,epassword));
     grid->attach(*blogin,2,2,1,1);
@@ -147,6 +181,8 @@ void Client::chat()
 
     text = Gtk::manage(new Gtk::Entry);
     grid->attach(*text, 1, 1, 2, 1);
+    text->signal_activate().connect(sigc::mem_fun(*this, &Client::on_button1_click));
+
     //Gtk::add_events(Gtk::KEY_MASK);
     //signal_key_press_event().connect(sigc::mem_fun(*this, &myWindow::receiveMessage));
     Gtk::Button *button1 = Gtk::manage(new Gtk::Button("Send Message"));
@@ -159,7 +195,7 @@ void Client::chat()
     button3->signal_clicked().connect(sigc::mem_fun(*this, &Client::on_button3_click));
     button4->signal_clicked().connect(sigc::mem_fun(*this, &Client::on_button4_click));
     button5->signal_clicked().connect(sigc::mem_fun(*this, &Client::showClients));
-    Glib::signal_timeout().connect( sigc::mem_fun(*this, &Client::receiveMessage),50 );
+    Glib::signal_timeout().connect( sigc::mem_fun(*this, &Client::receiveMessage),100 );
 
     grid->attach(*button1, 2, 2, 1, 1);
     grid->attach(*button5, 1, 2, 1, 1);
@@ -179,7 +215,7 @@ void Client::sendMessage(const char *buffer)
     {
     //buffer=sm.c_str();
     if ((numbytes = send(sockfd, buffer, 255, 0)) == -1) {
-        perror("recv");
+        cout<<"recv";
         exit(1);
     }
 
@@ -248,7 +284,8 @@ void Client::on_button2_click()
 {
     //displayText("mitesh","hi hows there");
     //exit(1);
-    displayText(Username,"Goodbye");
+    sendMessage((Username+":"+"Goodbye").c_str());
+    displayText("me","Goodbye");
     hide();
 }
 
@@ -278,7 +315,10 @@ void Client::on_button1_click()
 
 std::string Client::onlineClients()
 {
-    return "Pravesh\nMitesh\nAmit\nAlex";
+    sendMessage((Username+":"+"online clients").c_str());
+    recv(sockfd, buf, 255, 0);
+
+    	return string(buf);
 }
 
 void Client::showClients()
